@@ -1,0 +1,35 @@
+name: fetch-url
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL to fetch
+        required: true
+  issues:
+    types: [opened]
+  push:
+    paths: [urls.txt]
+permissions:
+  contents: write
+concurrency: fetch
+jobs:
+  fetch:
+    if: github.event_name != 'issues' || github.actor == 'Moneyinvest700'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch
+        env:
+          URL_INPUT: ${{ github.event.inputs.url }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          export URLS="$(printf '%s\n%s\n' "$URL_INPUT" "$ISSUE_TITLE")"
+          python3 fetch.py
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add out
+          git commit -m "fetched" || exit 0
+          git pull --rebase
+          git push
